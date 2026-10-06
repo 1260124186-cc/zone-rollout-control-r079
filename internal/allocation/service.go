@@ -45,9 +45,10 @@ func (s *Service) Allocate(
 				"state":   plan.State,
 			})
 		}
-		if existing, exists := domain.LeaseReplayFor(state, input.RequestKey); exists {
+		if existing, exists := domain.LeaseReplayFor(state, planID, input.RequestKey); exists {
 			if existing.RequestFingerprint != fingerprint {
 				return domain.NewError(domain.CodeIdempotencyConflict, "request key was reused with different lease parameters", map[string]any{
+					"plan_id":     planID,
 					"request_key": input.RequestKey,
 				})
 			}

@@ -40,8 +40,8 @@ func CompletePlan(plan *RolloutPlan, now time.Time) error {
 	return nil
 }
 
-func LeaseReplayKey(requestKey string) string {
-	return requestKey
+func LeaseReplayKey(planID string, requestKey string) string {
+	return planID + "\x1f" + requestKey
 }
 
 func EnsureLeaseReplays(state *State) {
@@ -55,26 +55,26 @@ func EnsureLeaseReplays(state *State) {
 
 func RecordLeaseReplay(state *State, planID string, requestKey string, groupID string) {
 	EnsureLeaseReplays(state)
-	state.LeaseReplays[LeaseReplayKey(requestKey)] = LeaseReplay{
+	state.LeaseReplays[LeaseReplayKey(planID, requestKey)] = LeaseReplay{
 		PlanID:     planID,
 		RequestKey: requestKey,
 		GroupID:    groupID,
 	}
 }
 
-func LookupLeaseReplay(state *State, requestKey string) (LeaseReplay, bool) {
+func LookupLeaseReplay(state *State, planID string, requestKey string) (LeaseReplay, bool) {
 	if state == nil || state.LeaseReplays == nil {
 		return LeaseReplay{}, false
 	}
-	entry, ok := state.LeaseReplays[LeaseReplayKey(requestKey)]
+	entry, ok := state.LeaseReplays[LeaseReplayKey(planID, requestKey)]
 	if !ok || entry.GroupID == "" {
 		return LeaseReplay{}, false
 	}
 	return entry, true
 }
 
-func LeaseReplayFor(state *State, requestKey string) (LeaseGroup, bool) {
-	entry, ok := LookupLeaseReplay(state, requestKey)
+func LeaseReplayFor(state *State, planID string, requestKey string) (LeaseGroup, bool) {
+	entry, ok := LookupLeaseReplay(state, planID, requestKey)
 	if !ok {
 		return LeaseGroup{}, false
 	}
@@ -94,7 +94,7 @@ func RebuildLeaseReplays(state *State) {
 		if group.RequestKey == "" {
 			continue
 		}
-		rebuilt[group.RequestFingerprint] = LeaseReplay{
+		rebuilt[LeaseReplayKey(group.PlanID, group.RequestKey)] = LeaseReplay{
 			PlanID:     group.PlanID,
 			RequestKey: group.RequestKey,
 			GroupID:    group.ID,
